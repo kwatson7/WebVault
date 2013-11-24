@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <color name="listViewColor">#fff</color>
+    <color name="black50">#8000</color>
+    <color name="black25">#4000</color>
+    <color name="button_color1">#8fff</color>
+    <color name="button_color2">#FCCC</color>
+    <color name="grey333">#F555</color>
+    <color name="grey533">#F888</color>
+    <color name="grey800">#FCCC</color>
+    <color name="orange1">#F5AF0A</color>
+    <color name="orange2">#FFD732</color>
+    <color name="gray">#F555</color>
+    <color name="red">#F00</color>
+    <color name="turquoise_bright">#FF33CBCC</color>
+    <color name="turquoise_dark">#FF134C4D</color>
+    <color name="purple_dark">#A033CC</color>
+    <color name="purple_dark_semi_transparent">#99A033CC</color>
+    <color name="purple_light_semi_transparent">#DDFFAAFF</color>
+    <color name="purple_light">#FFAAFF</color>
+    <!-- A light Holo shade of blue -->
+    <color name="holo_blue_light">#ff33b5e5</color>
+
+</resources>

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="app_name">webVault</string>
+    <string name="action_settings">Settings</string>
+    <string name="pick_key_file">Pick a local key file</string>
+    <string name="pick_receiver">Pick Recipient</string>
+
+</resources>

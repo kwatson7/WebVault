@@ -1,0 +1,14 @@
+{
+    "applications": {
+        "_default": {
+            "link": "webVault"
+        }, 
+        "webVault": {
+            "applicationId": "k35dEfzDIjK53MjGioLCl87R1VAfpspSmkQcpbnB", 
+            "masterKey": "YnWISNmRSp5JsvkvhtVIVol9kNUzwEBtFEnD5A1w"
+        }
+    }, 
+    "global": {
+        "parseVersion": "1.2.7"
+    }
+}
