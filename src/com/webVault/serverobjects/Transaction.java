@@ -2,6 +2,7 @@ package com.webVault.serverobjects;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 
@@ -308,6 +309,16 @@ public class Transaction{
 			return parse.getDouble(ReceiversNewTotal);
 		else
 			throw new UserNotInTransactionException();
+	}
+	
+	/**
+	 * Verify the transaction was truly sent by the sender
+	 * @return true if valid, false otherwise
+	 * @throws EncryptionException 
+	 */
+	public boolean verifyTransaction() throws EncryptionException{
+		PublicPrivateEncryptor sender = new PublicPrivateEncryptor(null, getSenderPublicKey());
+		return sender.verifyData(parse.getBytes(HashArray), parse.getBytes(Signature));
 	}
 
 	/**

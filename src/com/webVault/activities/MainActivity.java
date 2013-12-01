@@ -315,9 +315,15 @@ public class MainActivity extends CustomActivity{
 				@Override
 				public void onFinish(MainActivity activity,
 						ParseException result) {
-					Utils.showCustomToast(ctx, com.tools.Tools.pluralString(amount2, activity.asset.getName()) + " sent", true, 1);
+					if (result == null){
+					Utils.showCustomToast(activity, com.tools.Tools.pluralString(amount2, activity.asset.getName()) + " sent", true, 1);
 					activity.clearFields();
 					activity.fetchBalance();
+					}else{
+						activity.fetchBalance();
+						Log.e(Utils.LOG_TAG, result.getMessage());
+						Utils.showCustomToast(activity, result.getMessage(), false, (float) 1.5);
+					}
 				}
 			});
 		} catch (EncryptionException e) {

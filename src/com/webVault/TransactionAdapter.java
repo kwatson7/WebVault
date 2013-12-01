@@ -16,6 +16,7 @@ import com.webVault.serverobjects.Transaction.UserNotInTransactionException;
 
 import android.app.Activity;
 import android.content.Context;
+import android.content.res.Resources.NotFoundException;
 import android.text.Spanned;
 import android.text.SpannedString;
 import android.util.Log;
@@ -33,6 +34,7 @@ extends BaseAdapter{
 	private AccountHolder accountData = null;
 	private Activity act;
 	private com.tools.ViewLoader<Integer, Integer, TwoObjects<Spanned, Boolean>, TextView> assetLoader;		
+	private com.tools.ViewLoader<Integer, Integer, Boolean, View> transactionValidator;	
 
 	public TransactionAdapter(Activity a, List<Transaction> transactionList, final AccountHolder accountData) {
 		data = transactionList;
@@ -92,6 +94,39 @@ extends BaseAdapter{
 						}
 					}
 				});
+		
+		// background transaction validator
+		transactionValidator = new ViewLoader<Integer, Integer, Boolean, View>(
+				null,
+				new LoadData<Integer, Boolean, View>() {
+
+					@Override
+					public Boolean onGetData(Integer key) {
+						// get the item
+						Transaction transaction = (Transaction) getItem(key);
+						boolean value = false;
+						try {
+							value = transaction.verifyTransaction();
+						} catch (EncryptionException e) {
+							Log.e(Utils.LOG_TAG, Log.getStackTraceString(e));
+							value = false;
+						}
+						return value;
+					}
+
+					@Override
+					public void onBindView(Boolean data, View view) {
+						if (view == null || act==null)
+							return;
+						if (data == null)
+							view.setBackgroundColor(act.getResources().getColor(android.R.color.darker_gray));
+						else if (data)
+							view.setBackgroundColor(act.getResources().getColor(android.R.color.background_light));
+						else
+							view.setBackgroundColor(act.getResources().getColor(R.color.light_red));
+						
+					}
+				});
 	}
 
 	@Override
@@ -134,13 +169,13 @@ extends BaseAdapter{
 		try {
 			message.setText(transaction.getDecryptedMessage(accountData.getUserKey()));
 		} catch (EncryptionException e) {
-			message.setText("Decryption Error");
+			message.setText(e.getMessage());
 			Log.e(Utils.LOG_TAG, Log.getStackTraceString(e));
 		} catch (IOException e) {
-			message.setText("Decryption Error");
+			message.setText(e.getMessage());
 			Log.e(Utils.LOG_TAG, Log.getStackTraceString(e));
 		} catch (IncorrectPasswordException e) {
-			message.setText("Decryption Error");
+			message.setText(e.getMessage());
 			Log.e(Utils.LOG_TAG, Log.getStackTraceString(e));
 		}
 
@@ -165,6 +200,20 @@ extends BaseAdapter{
 			Log.e(Utils.LOG_TAG, Log.getStackTraceString(e));
 			total.setText("Error");
 		}
+		
+		// validate the transaction
+		transactionValidator.DisplayView(position, position, vi);
+		try {
+			if(!transaction.verifyTransaction()){
+				vi.setBackgroundColor(act.getResources().getColor(R.color.light_red));
+			}
+		} catch (NotFoundException e) {
+			Log.e(Utils.LOG_TAG, Log.getStackTraceString(e));
+		} catch (EncryptionException e) {
+			vi.setBackgroundColor(act.getResources().getColor(R.color.light_red));
+			Log.e(Utils.LOG_TAG, Log.getStackTraceString(e));
+		}
+		
 		return vi;
 	}
 }
