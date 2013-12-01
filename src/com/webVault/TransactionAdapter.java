@@ -92,8 +92,6 @@ extends BaseAdapter{
 						}
 					}
 				});
-
-
 	}
 
 	@Override
@@ -123,6 +121,7 @@ extends BaseAdapter{
 		TextView otherPerson = (TextView)vi.findViewById(R.id.otherPerson);
 		TextView message = (TextView)vi.findViewById(R.id.message);
 		TextView amount = (TextView)vi.findViewById(R.id.amount);
+		TextView total = (TextView)vi.findViewById(R.id.total);
 
 		// get the item
 		Transaction transaction = (Transaction) getItem(position);
@@ -158,7 +157,14 @@ extends BaseAdapter{
 
 		// load the asset
 		assetLoader.DisplayView(position, position, amount);
-
+		
+		// the total
+		try {
+			total.setText("(" + transaction.getNewTotal(accountData.getPublicKeyAsBase64()) + ")");
+		} catch (UserNotInTransactionException e) {
+			Log.e(Utils.LOG_TAG, Log.getStackTraceString(e));
+			total.setText("Error");
+		}
 		return vi;
 	}
 }

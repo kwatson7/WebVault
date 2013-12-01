@@ -26,7 +26,7 @@ public class Utils {
 	
 	// private constants
 	private static final String DEFAULT_NICKNAME_FILE = "nicknames";
-	private static final String DATE_FORMAT = "yyyy-MM-dd hh a";
+	private static final String DATE_FORMAT = "yyyy-MM-dd, hha";
 	
 
 	/**

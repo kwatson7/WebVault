@@ -9,8 +9,8 @@
         android:id="@+id/linearLayout2"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:layout_weight="1">
+        android:layout_weight="1"
+        android:orientation="vertical" >
 
         <TextView
             android:id="@+id/otherPerson"
@@ -25,7 +25,7 @@
             android:id="@+id/message"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="messager"
+            android:text="message"
             android:textColor="@android:color/black"
             android:textSize="12sp"
             android:textStyle="italic" />
@@ -35,26 +35,47 @@
         android:id="@+id/linearLayout3"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:orientation="vertical" >
+        android:orientation="vertical"
+        android:layout_marginRight="5dp">
 
-        <TextView
-            android:id="@+id/amount"
+        <LinearLayout
+            android:id="@+id/linearLayout4"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="$140"
-            android:textColor="@android:color/black"
-            android:textSize="15sp"
-            android:textStyle="bold"
-            android:layout_gravity="center_horizontal"/>
+            android:orientation="horizontal"
+            android:layout_gravity="center_horizontal|right">
+
+            <TextView
+                android:id="@+id/amount"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_vertical"
+                android:text="$140"
+                android:textColor="@android:color/black"
+                android:textSize="15sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/total"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="right|center_vertical"
+                android:text="$140"
+                android:textColor="@android:color/black"
+                android:textSize="10sp"
+                android:textStyle="normal"
+                android:layout_marginLeft="5dp"/>
+        </LinearLayout>
+
         <TextView
             android:id="@+id/date"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
             android:text="11/16/2013 6pm"
             android:textColor="@android:color/darker_gray"
             android:textSize="12sp"
-            android:textStyle="normal"
-            android:layout_gravity="center_horizontal"/>
+            android:textStyle="normal" />
     </LinearLayout>
 
 </LinearLayout>
