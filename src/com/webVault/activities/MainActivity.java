@@ -36,6 +36,7 @@ import com.webVault.Tasks.AccountValueTask;
 import com.webVault.Tasks.AccountValueTask.Output;
 import com.webVault.activities.LoginActivity.OnLogin;
 import com.webVault.serverobjects.Asset;
+import com.webVault.serverobjects.Asset.PriceDownloadCallback;
 import com.webVault.serverobjects.Transaction;
 import com.webVault.serverobjects.Transaction.InvalidTransactionException;
 
@@ -411,13 +412,31 @@ public class MainActivity extends CustomActivity{
 		task.setFinishedCallback(new FinishedCallback<MainActivity, AccountValueTask.Output>() {
 
 			@Override
-			public void onFinish(MainActivity activity, Output result) {
+			public void onFinish(final MainActivity activity, Output result) {
 				if (activity == null)
 					return;
 				if (result.exception == null){
 					activity.asset = result.asset;
 					activity.updateAmountUnitType();
 					activity.balanceField.setText(result.asset.getFormattedAmount(result.value));
+					
+					
+					activity.asset.fetchPriceInBackground(new PriceDownloadCallback() {
+						
+						@Override
+						public void onDownloadUiThread(double price, IOException exception) {
+							activity.message.setText(price+"");
+							
+						}
+						
+						@Override
+						public void onDownloadBackGroundThread(double price, IOException exception) {
+							
+						}
+					});
+					
+					
+					
 				}else
 					Utils.showCustomToast(activity, result.exception.getMessage(), true, 0.5f);
 			}
