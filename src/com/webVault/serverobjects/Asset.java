@@ -39,6 +39,7 @@ public class Asset{
 	private static final String Ticker = "Ticker"; 						// ticker symbol
 	private static final String ObjectId = "objectId";
 	private static final String FormattedSymbol = "FormattedSymbol";	// the symbol that can be parsed as html
+	private static final String ConversionRatio = "ConversionRatio";
 
 	// misc private variables
 	private ParseObject parse; 											// The parse object this wraps around
@@ -61,7 +62,8 @@ public class Asset{
 			String downloadService,
 			String ticker,
 			String formattedSymbol,
-			double premium
+			double premium,
+			double conversionRatio
 			) throws EncryptionException{
 
 		parse = new ParseObject(OBJECT_NAME);
@@ -74,6 +76,7 @@ public class Asset{
 		parse.put(DownloadService, downloadService);
 		parse.put(FormattedSymbol, formattedSymbol);
 		parse.put(Ticker, ticker);
+		parse.put(ConversionRatio, conversionRatio);
 
 		// generate the string we will hash and add nonce
 		String hashString = createHashString(owner, name);
@@ -95,6 +98,7 @@ public class Asset{
 		ParseObject parse = getParse();
 		String downloadService = parse.getString(DownloadService);
 		String symbol = parse.getString(Ticker);
+		final double conversion = parse.getDouble(ConversionRatio);
 		final double premium = parse.getDouble(Premium)/100;
 		
 		// get the type of Service
@@ -111,13 +115,13 @@ public class Asset{
 			@Override
 			public void onDownloadUiThread(IOException exception) {
 				double price = stock.getPrice();
-				callback.onDownloadUiThread(price*(1+premium), exception);
+				callback.onDownloadUiThread(price*(1+premium)*conversion, exception);
 			}
 			
 			@Override
 			public void onDownloadBackGroundThread(IOException exception) {
 				double price = stock.getPrice();
-				callback.onDownloadBackGroundThread(price*(1+premium), exception);
+				callback.onDownloadBackGroundThread(price*(1+premium)*conversion, exception);
 			}
 		});
 			
