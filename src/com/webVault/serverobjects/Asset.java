@@ -157,7 +157,7 @@ public class Asset{
 	public static Asset fetchAsset(String objectId) throws ParseException{
 		// query the server for the asset with the given id
 		ParseQuery query = new ParseQuery(OBJECT_NAME);
-		query.setCachePolicy(ParseQuery.CachePolicy.CACHE_ELSE_NETWORK);
+		query.setCachePolicy(ParseQuery.CachePolicy.NETWORK_ONLY);
 		ParseObject object = query.getFirst();
 		if (object == null){
 			throw new ParseException(EXCEPTION_CODE_UNKNOWN_ASSET, EXCEPTION_STRING_UNKNOWN_ASSET);
