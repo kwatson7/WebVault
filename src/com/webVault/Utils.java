@@ -26,7 +26,7 @@ public class Utils {
 	
 	// private constants
 	private static final String DEFAULT_NICKNAME_FILE = "nicknames";
-	private static final String DATE_FORMAT = "yyyy-MM-dd HH:mm:ss";
+	private static final String DATE_FORMAT = "yyyy-MM-dd hh a";
 	
 
 	/**
@@ -95,7 +95,7 @@ public class Utils {
 	}
 	
 	/**
-	 * Returns a formatted string representation of date. In the format: yyyy-MM-dd HH:mm:ss
+	 * Returns a formatted string representation of date. In the format: yyyy-MM-dd hh:mm:ss
 	 * @param date
 	 * @return
 	 */

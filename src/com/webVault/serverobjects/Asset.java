@@ -1,5 +1,6 @@
 package com.webVault.serverobjects;
 
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -96,6 +97,7 @@ public class Asset{
 	public static Asset fetchAsset(String objectId) throws ParseException{
 		// query the server for the asset with the given id
 		ParseQuery query = new ParseQuery(OBJECT_NAME);
+		query.setCachePolicy(ParseQuery.CachePolicy.CACHE_ELSE_NETWORK);
 		ParseObject object = query.getFirst();
 		if (object == null){
 			throw new ParseException(EXCEPTION_CODE_UNKNOWN_ASSET, EXCEPTION_STRING_UNKNOWN_ASSET);
@@ -123,7 +125,24 @@ public class Asset{
 	 * @return the html formatted output
 	 */
 	public Spanned getFormattedAmount(double amount){
-		return Html.fromHtml(getSymbol() + amount);
+		DecimalFormat df = new DecimalFormat("#.####");
+		return Html.fromHtml(getSymbol() + df.format(amount));
+	}
+	
+	/**
+	 * Return the formatted amount for this asset using its symbol. 
+	 * EG if the symbol is @, and amount is 5, and positive is true then output is +@5.
+	 * EG, or if symbol is $, and amount is 6.4, then output is $6.4
+	 * @param amount the amount of the type to format with symbol
+	 * @param positive true if the amount is positive, and negative otherwise
+	 * @return the html formatted output
+	 */
+	public Spanned getFormattedAmount(double amount, boolean positive){
+		DecimalFormat df = new DecimalFormat("#.####");
+		if (positive)
+			return Html.fromHtml("+" + getSymbol() + df.format(amount));
+		else
+			return Html.fromHtml("-" + getSymbol() + df.format(amount));
 	}
 	
 	/**
