@@ -178,14 +178,19 @@ public class EncryptionTests extends AndroidTestCase {
 		Assert.assertTrue(encryptedMessage.verifyMessage());
 		
 		// check message
-		String message = encryptedMessage.decryptMessage(receiver.getPrivate());
+		String message = encryptedMessage.decryptMessageForReceiver(receiver.getPrivate());
 		Assert.assertEquals(message, message0);
 		
 		// do again with new instance
 		com.tools.encryption.EncryptedMessage encryptedMessage2 = new com.tools.encryption.EncryptedMessage(
-				sender.getPublic(), receiver.getPublic(), encryptedMessage.encryptedMessage, encryptedMessage.signedMessage, encryptedMessage.encryptedSecretKey);
+				sender.getPublic(),
+				receiver.getPublic(),
+				encryptedMessage.encryptedMessage,
+				encryptedMessage.signedMessage,
+				encryptedMessage.encryptedSecretKey,
+				encryptedMessage.encryptedSecretKeyForSender);
 		Assert.assertTrue(encryptedMessage2.verifyMessage());
-		String message2 = encryptedMessage2.decryptMessage(receiver.getPrivate());
+		String message2 = encryptedMessage2.decryptMessageForReceiver(receiver.getPrivate());
 		Assert.assertEquals(message2, message0);
     }
     
