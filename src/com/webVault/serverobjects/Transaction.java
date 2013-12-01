@@ -7,6 +7,8 @@ import java.util.List;
 
 
 import android.app.ProgressDialog;
+import android.content.DialogInterface;
+import android.content.DialogInterface.OnCancelListener;
 import android.text.Spannable;
 import android.text.SpannableStringBuilder;
 import android.text.style.StyleSpan;
@@ -130,7 +132,7 @@ public class Transaction{
 	}
 
 	/**
-	 * Query the transactions in the background
+	 * Query the transactions in the background. If the dialog is closed, the activity will be ended
 	 * @param <ACTIVITY_TYPE> the type of activity this was called from
 	 * @param act The activity
 	 * @param progressBars any progress to show, can be null
@@ -190,7 +192,15 @@ public class Transaction{
 					dialog.setTitle("Fetching Transactions");
 					dialog.setMessage("Please wait...");
 					dialog.setIndeterminate(true);
-					dialog.setCancelable(false);
+					dialog.setCancelable(true);
+					dialog.setOnCancelListener(new OnCancelListener() {
+						
+						@Override
+						public void onCancel(DialogInterface dialog) {
+							if (callingActivity != null && !callingActivity.isFinishing())
+							callingActivity.finish();
+						}
+					});
 				}
 			}
 		};
@@ -276,13 +286,28 @@ public class Transaction{
 	}
 
 	/**
-	 * Get the asset for the given transation. Queries server, so can be slow
+	 * Get the asset for the given transaction. Queries server, so can be slow
 	 * @return
 	 * @throws ParseException
 	 */
 	public Asset getAsset() throws ParseException{
 		Asset asset = Asset.fetchAsset(getItemId());
 		return asset;
+	}
+	
+	/**
+	 * Get the new total after this transaction for the input public key
+	 * @param publicKey The public key to look at
+	 * @return the new total
+	 * @throws UserNotInTransactionException if the user is not in this transaction
+	 */
+	public double getNewTotal(String publicKey) throws UserNotInTransactionException{
+		if (isSender(publicKey))
+			return parse.getDouble(SendersNewTotal);
+		else if (isReceiver(publicKey))
+			return parse.getDouble(ReceiversNewTotal);
+		else
+			throw new UserNotInTransactionException();
 	}
 
 	/**
