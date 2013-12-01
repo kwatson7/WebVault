@@ -3,10 +3,11 @@ package com.webVault.activities;
 import java.io.IOException;
 import java.util.List;
 
-import com.parse.FindCallback;
 import com.parse.ParseException;
-import com.parse.ParseObject;
+import com.parse.ParseQuery;
 import com.tools.CustomActivity;
+import com.tools.CustomAsyncTask.FinishedCallback;
+import com.tools.TwoObjects;
 import com.tools.encryption.EncryptionException;
 import com.tools.encryption.IncorrectPasswordException;
 import com.webVault.AccountData;
@@ -34,6 +35,9 @@ public class TransactionViewerActivity extends CustomActivity{
 
 	@Override
 	protected void onCreateOverride(Bundle savedInstanceState) {
+		
+		ParseQuery.clearAllCachedResults();
+		
 		initializeLayout();	
 	}
 
@@ -56,30 +60,37 @@ public class TransactionViewerActivity extends CustomActivity{
 	private void afterResumeToDo(){
 		if (accountData == null)
 			return;
-		Transaction.queryTransactionsInBackground(0, 10, accountData.getPublicKeyAsBase64(), queryTransactionCallback);
+		Transaction.queryTransactionsInBackground(
+				act,
+				null,
+				true,
+				0,
+				100,
+				accountData.getPublicKeyAsBase64(),
+				queryTransactionCallback);
 	}
+	
 	/**
 	 * When querying the transaction, perform this when finished. Will load list adapter with new transaction
 	 */
-	private FindCallback queryTransactionCallback = new FindCallback(){
+	private static FinishedCallback<TransactionViewerActivity, TwoObjects<ParseException, List<Transaction>>> queryTransactionCallback = 
+		new FinishedCallback<TransactionViewerActivity, TwoObjects<ParseException,List<Transaction>>>() {
 
-		@Override
-		public void done(List<ParseObject> objects, ParseException e) {
-			
-			// if we get an exception, just leave activity
-			if (e != null){
-				Log.e(Utils.LOG_TAG, e.getMessage());
-				Utils.showCustomToast(TransactionViewerActivity.this, e.getMessage(), true, 1);
-				finish();
-				return;
+			@Override
+			public void onFinish(TransactionViewerActivity activity,
+					TwoObjects<ParseException, List<Transaction>> result) {
+				// if we get an exception, just leave activity
+				if (result.mObject1 != null){
+					Log.e(Utils.LOG_TAG, result.mObject1.getMessage());
+					Utils.showCustomToast(activity, result.mObject1.getMessage(), true, 1);
+					activity.finish();
+					return;
+				}
+				TransactionAdapter adapter = new TransactionAdapter(activity, result.mObject2, activity.accountData);
+				activity.listView.setAdapter(adapter);
+				
 			}
-			
-			List<Transaction> list = Transaction.convertList(objects);
-			TransactionAdapter adapter = new TransactionAdapter(act, list, accountData);
-			listView.setAdapter(adapter);
-		}
-		
-	};
+		};
 
 	/**
 	 * Load the account data into this activity. If it fails, it will launch a login screen
