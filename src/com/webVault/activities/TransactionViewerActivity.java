@@ -49,11 +49,15 @@ public class TransactionViewerActivity extends CustomActivity{
 	protected void onResume(){
 		super.onResume();
 
-		loadAccountDataLogin();
-		
-		Transaction.queryTransactionsInBackground(0, 10, accountData.getPublicKeyAsBase64(), queryTransactionCallback);
+		if(loadAccountDataLogin())
+			afterResumeToDo();
 	}
 	
+	private void afterResumeToDo(){
+		if (accountData == null)
+			return;
+		Transaction.queryTransactionsInBackground(0, 10, accountData.getPublicKeyAsBase64(), queryTransactionCallback);
+	}
 	/**
 	 * When querying the transaction, perform this when finished. Will load list adapter with new transaction
 	 */
@@ -154,6 +158,7 @@ public class TransactionViewerActivity extends CustomActivity{
 			@Override
 			public void onSuccessfulLoginPassword(String password) {
 				getAccountData(password);
+				afterResumeToDo();
 			}
 
 			@Override
@@ -161,7 +166,6 @@ public class TransactionViewerActivity extends CustomActivity{
 				Utils.showCustomToast(ctx, "Login error... Quitting", true, 1);
 				finish();
 				return;
-
 			}
 		});
 	}
