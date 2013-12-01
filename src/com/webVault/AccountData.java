@@ -236,6 +236,10 @@ public class AccountData {
 		}
 		
 		AccountHolder dataOut = new AccountHolder(userKey, nicknameLookup, password);
+		// no data, so generate a new one
+		if (accountHolder == null){
+			accountHolder = new ExpiringValue<AccountHolder>(secondsToExpirePrivateData, dataOut, null, true);
+		}
 		accountHolder.setValue(dataOut);
 		return dataOut;
 	}
