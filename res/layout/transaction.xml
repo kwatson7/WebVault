@@ -91,5 +91,12 @@
         android:layout_height="wrap_content"
         android:text="Send"
         android:onClick="sendClicked"/>
+    <Button
+        android:id="@+id/viewHistory"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:onClick="onViewHistory"
+        android:text="View History" />
+    
 
 </LinearLayout>

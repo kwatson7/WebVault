@@ -361,6 +361,11 @@ public class MainActivity extends CustomActivity{
 		IntentIntegrator integrator = new IntentIntegrator(this);
 		integrator.shareText(accountData.getPublicKeyAsBase64());
 	}
+	
+	public void onViewHistory(View view){
+		Intent intent = new Intent(this, TransactionViewerActivity.class);
+		this.startActivity(intent);
+	}
 
 	/**
 	 * Scan someone's public key

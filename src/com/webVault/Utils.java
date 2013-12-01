@@ -1,6 +1,9 @@
 package com.webVault;
 
 import java.io.File;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 import com.tools.ExpiringValue;
 
@@ -21,9 +24,9 @@ public class Utils {
 	public static final String appPath = "Web Vault";
 	public static final String SCARON_TYPE = "KRaIllDliR";
 	
-	
 	// private constants
 	private static final String DEFAULT_NICKNAME_FILE = "nicknames";
+	private static final String DATE_FORMAT = "yyyy-MM-dd hh a";
 	
 
 	/**
@@ -89,5 +92,15 @@ public class Utils {
 
 		// show it for custom amount of time
 		com.tools.ToastExpander.showFor(toast, (long) (com.tools.Tools.getTimeToReadForToast(text)*extraFactor));
+	}
+	
+	/**
+	 * Returns a formatted string representation of date. In the format: yyyy-MM-dd hh:mm:ss
+	 * @param date
+	 * @return
+	 */
+	public static String getFormattedDate(Date date){
+		DateFormat formatter = new SimpleDateFormat(Utils.DATE_FORMAT);
+		return formatter.format(date);
 	}
 }

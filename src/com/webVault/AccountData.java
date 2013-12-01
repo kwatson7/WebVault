@@ -21,6 +21,7 @@ import com.tools.encryption.EncryptionException;
 import com.tools.encryption.IncorrectPasswordException;
 import com.tools.encryption.PublicPrivateEncryptor;
 import com.tools.encryption.SymmetricEncryptor;
+import com.webVault.AccountData.KeyNickname.NoNicknameException;
 
 /**
  * Class that holds sensitive account data. This should not be saved to permanent memory non encrypted
@@ -114,10 +115,15 @@ public class AccountData {
 		/**
 		 * Get the nickname for the given key
 		 * @param userPublicKey The usuer's public key to lookup
-		 * @return the nickname, null if none exists
+		 * @return the nickname, throws exception if none exists
+		 * @throws NoNicknameException 
 		 */
-		public String getNickname(String userPublicKey){
-			return nicknameLookup.get(userPublicKey);
+		public String getNickname(String userPublicKey) throws NoNicknameException{
+			String name = nicknameLookup.get(userPublicKey);
+			if (name == null)
+				throw new KeyNickname.NoNicknameException();
+			else
+			return name;
 		}
 
 		/**
@@ -161,6 +167,19 @@ public class AccountData {
 		private KeyNickname(String publicKey, String nickname){
 			this.publicKey = publicKey;
 			this.nickname = nickname;
+		}
+		
+		public static class NoNicknameException
+		extends Exception{
+
+			/**
+			 * 
+			 */
+			private static final long serialVersionUID = -2366332420800291598L;
+
+			public NoNicknameException(){
+				super("No nickname available");
+			}
 		}
 	}
 
