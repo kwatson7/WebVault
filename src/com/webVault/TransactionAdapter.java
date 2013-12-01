@@ -4,6 +4,9 @@ import java.io.IOException;
 import java.util.List;
 
 import com.parse.ParseException;
+import com.tools.TwoObjects;
+import com.tools.ViewLoader;
+import com.tools.ViewLoader.LoadData;
 import com.tools.encryption.EncryptionException;
 import com.tools.encryption.IncorrectPasswordException;
 import com.webVault.AccountData.AccountHolder;
@@ -13,6 +16,8 @@ import com.webVault.serverobjects.Transaction.UserNotInTransactionException;
 
 import android.app.Activity;
 import android.content.Context;
+import android.text.Spanned;
+import android.text.SpannedString;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -27,12 +32,68 @@ extends BaseAdapter{
 	private LayoutInflater inflater = null;
 	private AccountHolder accountData = null;
 	private Activity act;
+	private com.tools.ViewLoader<Integer, Integer, TwoObjects<Spanned, Boolean>, TextView> assetLoader;		
 
-	public TransactionAdapter(Activity a, List<Transaction> transactionList, AccountHolder accountData) {
+	public TransactionAdapter(Activity a, List<Transaction> transactionList, final AccountHolder accountData) {
 		data = transactionList;
 		inflater = (LayoutInflater)a.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
 		this.accountData = accountData;
 		act = a;
+
+		// the background thread asset loader
+		assetLoader = new ViewLoader<Integer, Integer, TwoObjects<Spanned, Boolean>, TextView>(
+				new TwoObjects<Spanned, Boolean>(new SpannedString("Loading..."), null),
+				new LoadData<Integer, TwoObjects<Spanned, Boolean>, TextView>() {
+
+					@Override
+					public TwoObjects<Spanned, Boolean> onGetData(Integer key) {
+						// get the item
+						Transaction transaction = (Transaction) getItem(key);
+
+						// initialize output
+						TwoObjects<Spanned, Boolean> out = new TwoObjects<Spanned, Boolean>(null, null);
+						
+						// change color based on amount and show the amount
+						try{
+							if (transaction.isSender(accountData.getPublicKeyAsBase64())){
+								out.mObject1 = transaction.getAsset().getFormattedAmount(transaction.getAmount(), false);
+								out.mObject2 = false;
+							}else if (transaction.isReceiver(accountData.getPublicKeyAsBase64())){
+								out.mObject1 = transaction.getAsset().getFormattedAmount(transaction.getAmount(), true);
+								out.mObject2 = true;
+							}else{
+								out.mObject1 = transaction.getAsset().getFormattedAmount(transaction.getAmount());
+								out.mObject2 = null;
+							}
+						}catch (ParseException e){
+							out.mObject1 = new SpannedString("Parse Error");
+							out.mObject2 = null;
+							Log.e(Utils.LOG_TAG, Log.getStackTraceString(e));
+						}
+						
+						return out;
+					}
+
+					@Override
+					public void onBindView(TwoObjects<Spanned, Boolean> data, TextView view) {
+						if (view == null || data == null)
+							return;
+
+						// set the text
+						view.setText(data.mObject1);
+
+						// set the color
+						if (data.mObject2 == null){
+							view.setTextColor(act.getResources().getColor(android.R.color.black));
+						}else if (data.mObject2){
+							view.setTextColor(act.getResources().getColor(R.color.light_green));
+						}else{
+							view.setTextColor(act.getResources().getColor(R.color.light_red));
+						}
+					}
+				});
+
+
 	}
 
 	@Override
@@ -62,14 +123,14 @@ extends BaseAdapter{
 		TextView otherPerson = (TextView)vi.findViewById(R.id.otherPerson);
 		TextView message = (TextView)vi.findViewById(R.id.message);
 		TextView amount = (TextView)vi.findViewById(R.id.amount);
-		
+
 		// get the item
 		Transaction transaction = (Transaction) getItem(position);
 
 		// set fields
 		// date
 		date.setText(Utils.getFormattedDate(transaction.getDateCreated()));
-		
+
 		// the message
 		try {
 			message.setText(transaction.getDecryptedMessage(accountData.getUserKey()));
@@ -83,7 +144,7 @@ extends BaseAdapter{
 			message.setText("Decryption Error");
 			Log.e(Utils.LOG_TAG, Log.getStackTraceString(e));
 		}
-		
+
 		// the other persons name
 		try {
 			otherPerson.setText(transaction.getOtherPersonsNickname(accountData));
@@ -94,24 +155,9 @@ extends BaseAdapter{
 			otherPerson.setText("???");
 			Log.e(Utils.LOG_TAG, Log.getStackTraceString(e));
 		}
-		
-		// change color based on amount and show the amount
-		try{
-			if (transaction.isSender(accountData.getPublicKeyAsBase64())){
-				amount.setTextColor(act.getResources().getColor(R.color.light_red));
-				amount.setText(transaction.getAsset().getFormattedAmount(transaction.getAmount(), false));
-			}else if (transaction.isReceiver(accountData.getPublicKeyAsBase64())){
-				amount.setTextColor(act.getResources().getColor(R.color.light_green));
-				amount.setText(transaction.getAsset().getFormattedAmount(transaction.getAmount(), true));
-			}else{
-				amount.setTextColor(act.getResources().getColor(android.R.color.black));
-				amount.setText(transaction.getAsset().getFormattedAmount(transaction.getAmount()));
-			}
-		}catch (ParseException e){
-			amount.setText("Parse Error");
-			amount.setTextColor(act.getResources().getColor(android.R.color.black));
-			Log.e(Utils.LOG_TAG, Log.getStackTraceString(e));
-		}
+
+		// load the asset
+		assetLoader.DisplayView(position, position, amount);
 
 		return vi;
 	}
