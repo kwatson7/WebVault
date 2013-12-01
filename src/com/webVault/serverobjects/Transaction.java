@@ -101,27 +101,25 @@ public class Transaction{
 
 		// initialize query
 		ParseQuery query = new ParseQuery(Transaction.OBJECT_NAME);
-
-		// set find most recent but skip some if input
-		query.orderByDescending("createdAt");
-		query.setSkip(skip);
 		
-		// find only transaction matching the public key
+		// find only transaction matching the public key for sender
 		ParseQuery sender = new ParseQuery(Transaction.OBJECT_NAME);
 		sender.whereEqualTo(SenderPublic, publicKey);
 		 
+		// repeat for receiver
 		ParseQuery receiver = new ParseQuery(Transaction.OBJECT_NAME);
 		receiver.whereEqualTo(ReceiverPublic, publicKey);
-		 
+		
+		// put two queries together
 		List<ParseQuery> queries = new ArrayList<ParseQuery>();
 		queries.add(sender);
 		queries.add(receiver);
-		 
 		ParseQuery mainQuery = ParseQuery.or(queries);
+		
+		// set find most recent but skip some if input
+		mainQuery.orderByDescending("createdAt");
+		mainQuery.setSkip(skip);
 		mainQuery.findInBackground(findCallback);		
-
-		// now perform the query
-		query.findInBackground(findCallback);
 	}
 
 	/**
