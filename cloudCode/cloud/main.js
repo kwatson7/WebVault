@@ -97,6 +97,7 @@ Parse.Cloud.define("userValue", function(request, response) {
 	// the query
 	var mainQuery = Parse.Query.or(sender, receiver);
 	mainQuery.limit(1);
+	mainQuery.descending("createdAt");
 	mainQuery.find({
 	  success: function(transactions) {
 	     var sum = 0;
