@@ -10,6 +10,7 @@ import android.app.ProgressDialog;
 import android.text.Spannable;
 import android.text.SpannableStringBuilder;
 import android.text.style.StyleSpan;
+import android.util.Log;
 
 import com.parse.FindCallback;
 import com.parse.ParseException;
@@ -18,11 +19,13 @@ import com.parse.ParseQuery;
 import com.tools.CustomActivity;
 import com.tools.CustomAsyncTask;
 import com.tools.CustomAsyncTask.FinishedCallback;
+import com.tools.TwoObjects;
 import com.tools.encryption.EncryptionException;
 import com.tools.encryption.IncorrectPasswordException;
 import com.tools.encryption.PublicPrivateEncryptor;
 import com.webVault.AccountData.AccountHolder;
 import com.webVault.AccountData.KeyNickname.NoNicknameException;
+import com.webVault.Utils;
 
 public class Transaction{
 
@@ -41,7 +44,9 @@ public class Transaction{
 	private static final String Signature = "Signature"; 				// hash of hash_string that verifies sender actually sent with private key
 	private static final String EncryptedSecretKeyMessage = "EncryptedSecretKeyMessage"; 	// the encrypted secret key for the message
 	private static final String EncryptedSecretKeyMessageForSender = "EncryptedSecretKeyMessageForSender"; // the encrypted secret key that the receiver can decrypt
-
+	private static final String SendersNewTotal = "SendersNewTotal"; 	// the new total of the sender
+	private static final String ReceiversNewTotal = "ReceiversNewTotal";// the new total of the receiver
+	
 	// misc private variables
 	private ParseObject parse; 											// The parse object this wraps around
 
@@ -60,7 +65,7 @@ public class Transaction{
 			String itemType,
 			double amount,
 			String message
-			) throws EncryptionException, InvalidTransactionException, IOException{
+	) throws EncryptionException, InvalidTransactionException, IOException{
 
 		// check acceptable transaction
 		checkTransaction(amount, itemType);
@@ -89,39 +94,108 @@ public class Transaction{
 		parse.put(HashArray, hashBytes);
 		parse.put(Signature, sender.signData(hashBytes));
 	}
-	
+
 	/**
-	 * Query the transaction
+	 * Query the transaction on calling thread
 	 * @param skip The number of queries to skip
 	 * @param nNewQueries the number of new queries to get
 	 * @param publicKey the public key we are going to search for
-	 * @param findCallback the callback to perform when done
+	 * @return the list of transactions
+	 * @throws ParseException
 	 */
-	public static void queryTransactionsInBackground(int skip, int nNewQueries, String publicKey, FindCallback findCallback){
+	public static List<Transaction> queryTransactions(int skip, int nNewQueries, String publicKey)
+	throws ParseException{
 
-		// initialize query
-		ParseQuery query = new ParseQuery(Transaction.OBJECT_NAME);
-
-		// set find most recent but skip some if input
-		query.orderByDescending("createdAt");
-		query.setSkip(skip);
-		
-		// find only transaction matching the public key
+		// find only transaction matching the public key for sender
 		ParseQuery sender = new ParseQuery(Transaction.OBJECT_NAME);
 		sender.whereEqualTo(SenderPublic, publicKey);
-		 
+
+		// repeat for receiver
 		ParseQuery receiver = new ParseQuery(Transaction.OBJECT_NAME);
 		receiver.whereEqualTo(ReceiverPublic, publicKey);
-		 
+
+		// put two queries together
 		List<ParseQuery> queries = new ArrayList<ParseQuery>();
 		queries.add(sender);
 		queries.add(receiver);
-		 
 		ParseQuery mainQuery = ParseQuery.or(queries);
-		mainQuery.findInBackground(findCallback);		
 
-		// now perform the query
-		query.findInBackground(findCallback);
+		// set find most recent but skip some if input
+		mainQuery.orderByDescending("createdAt");
+		mainQuery.setSkip(skip);
+		mainQuery.setLimit(nNewQueries);
+
+		// query and convert to Transaction
+		return Transaction.convertList(mainQuery.find());		
+	}
+
+	/**
+	 * Query the transactions in the background
+	 * @param <ACTIVITY_TYPE> the type of activity this was called from
+	 * @param act The activity
+	 * @param progressBars any progress to show, can be null
+	 * @param isShowDialog boolean to show a progress dialog
+	 * @param skip the number of  transacations to skip
+	 * @param nNewQueries the total number to get
+	 * @param publicKey the public key we are going to search for
+	 * @param callback this will be called when complete
+	 */
+	public static <ACTIVITY_TYPE extends CustomActivity>void queryTransactionsInBackground(
+			ACTIVITY_TYPE act,
+			ArrayList<String> progressBars,
+			final boolean isShowDialog,
+			final int skip,
+			final int nNewQueries,
+			final String publicKey,
+			FinishedCallback<ACTIVITY_TYPE, TwoObjects<ParseException, List<Transaction>>> callback){
+
+		// create the task
+		CustomAsyncTask<ACTIVITY_TYPE, Void, TwoObjects<ParseException, List<Transaction>>> task =
+			new CustomAsyncTask<ACTIVITY_TYPE, Void, TwoObjects<ParseException, List<Transaction>>>(act, 0, false, true, progressBars){
+
+			@Override
+			protected void onPreExecute() {
+
+			}
+
+			@Override
+			protected TwoObjects<ParseException, List<Transaction>> doInBackground(Void... params) {
+				TwoObjects<ParseException, List<Transaction>> out =
+					new TwoObjects<ParseException, List<Transaction>>(null, null);
+				try {
+					out.mObject2 = queryTransactions(skip, nNewQueries, publicKey);
+				} catch (ParseException e) {
+					out.mObject1 = e;
+					Log.e(Utils.LOG_TAG, Log.getStackTraceString(e));
+				}
+				return out;
+			}
+
+			@Override
+			protected void onProgressUpdate(Void... progress) {
+
+			}
+
+			@Override
+			protected void onPostExectueOverride(TwoObjects<ParseException, List<Transaction>> result) {
+
+			}
+
+			@Override
+			protected void setupDialog() {
+				// show dialog for this long process
+				if (callingActivity != null && isShowDialog){
+					dialog = new ProgressDialog(callingActivity);
+					dialog.setProgressStyle(ProgressDialog.STYLE_SPINNER);
+					dialog.setTitle("Fetching Transactions");
+					dialog.setMessage("Please wait...");
+					dialog.setIndeterminate(true);
+					dialog.setCancelable(false);
+				}
+			}
+		};
+		task.setFinishedCallback(callback);
+		task.execute();
 	}
 
 	/**
@@ -134,7 +208,7 @@ public class Transaction{
 			ACTIVITY_TYPE act,
 			ArrayList<String> progressBars,
 			FinishedCallback<ACTIVITY_TYPE, ParseException> callback){
-		
+
 		// create the task
 		CustomAsyncTask<ACTIVITY_TYPE, Void, ParseException> task = new CustomAsyncTask<ACTIVITY_TYPE, Void, ParseException>(act, 0, true, false, progressBars){
 
@@ -192,7 +266,7 @@ public class Transaction{
 	public ParseObject getParse(){
 		return parse;
 	}
-	
+
 	/**
 	 * Return the date this transaction was created
 	 * @return
@@ -200,7 +274,7 @@ public class Transaction{
 	public Date getDateCreated(){
 		return parse.getCreatedAt();
 	}
-	
+
 	/**
 	 * Get the asset for the given transation. Queries server, so can be slow
 	 * @return
@@ -210,7 +284,7 @@ public class Transaction{
 		Asset asset = Asset.fetchAsset(getItemId());
 		return asset;
 	}
-	
+
 	/**
 	 * Determine the other person in transaction (other than the one passed in).
 	 * @param accountData the accountData on this device
@@ -223,7 +297,7 @@ public class Transaction{
 		String receiverPublicKey = getReceiverPublicKey();
 		String senderPublicKey = getSenderPublicKey();
 		String thisUser = accountData.getPublicKeyAsBase64();
-		
+
 		// check if user is sender, if so grab the other's nieckname
 		if (senderPublicKey.equals(thisUser)){
 			return accountData.getNickname(receiverPublicKey);
@@ -233,7 +307,7 @@ public class Transaction{
 			throw new UserNotInTransactionException();
 		}
 	}
-	
+
 	/**
 	 * determine if the input user is the sender
 	 * @param userPublicKey
@@ -241,11 +315,11 @@ public class Transaction{
 	 */
 	public boolean isSender(String userPublicKey){
 		String senderPublicKey = getSenderPublicKey();
-		
+
 		// check if user is sender, if so grab the other's nieckname
 		return senderPublicKey.equals(userPublicKey);
 	}
-	
+
 	/**
 	 * determine if the input user is the receiver
 	 * @param userPublicKey
@@ -253,11 +327,11 @@ public class Transaction{
 	 */
 	public boolean isReceiver(String userPublicKey){
 		String receiverPublicKey = getReceiverPublicKey();
-		
+
 		// check if user is sender, if so grab the other's nieckname
 		return receiverPublicKey.equals(userPublicKey);
 	}
-	
+
 	/**
 	 * Create a string that says creates a formatted string indicating who sent what to whome. 
 	 * Example: "Bob sent $6 to Alice."
@@ -271,19 +345,19 @@ public class Transaction{
 		String senderPublicKey = getSenderPublicKey();
 		String thisUser = accountData.getPublicKeyAsBase64();
 		double amount = getAmount();
-		
+
 		// the asset
 		Asset asset = getAsset();
-		
+
 		// start building the string
 		final String you = "You";
 		final SpannableStringBuilder sb = new SpannableStringBuilder();
-		
+
 		// check if user is sender else add the sender nickname
 		if (senderPublicKey.equals(thisUser)){
 			sb.append(you);
 			final StyleSpan bss = new StyleSpan(android.graphics.Typeface.BOLD);
-	        sb.setSpan(bss, 0, you.length(), Spannable.SPAN_MARK_MARK);
+			sb.setSpan(bss, 0, you.length(), Spannable.SPAN_MARK_MARK);
 		}else{
 			try {
 				sb.append(accountData.getNickname(senderPublicKey));
@@ -292,17 +366,17 @@ public class Transaction{
 			}
 		}
 		sb.append(" sent ");
-		
+
 		// how much
 		sb.append(asset.getFormattedAmount(amount));
 		sb.append(" to ");
-		
+
 		// repeat for receiver
 		if (receiverPublicKey.equals(thisUser)){
-			
+
 			sb.append(you);
 			final StyleSpan bss = new StyleSpan(android.graphics.Typeface.BOLD);
-	        sb.setSpan(bss, sb.length()-you.length(), sb.length(), Spannable.SPAN_MARK_MARK);
+			sb.setSpan(bss, sb.length()-you.length(), sb.length(), Spannable.SPAN_MARK_MARK);
 		}else{
 			try {
 				sb.append(accountData.getNickname(receiverPublicKey));
@@ -313,7 +387,7 @@ public class Transaction{
 
 		return sb;		
 	}
-	
+
 
 	/**
 	 * Decrypt the message with the given receiver. Must have private key
@@ -324,7 +398,7 @@ public class Transaction{
 	 * @throws IncorrectPasswordException
 	 */
 	public String getDecryptedMessage(PublicPrivateEncryptor privateKeyPair)
-			throws EncryptionException, IOException, IncorrectPasswordException{
+	throws EncryptionException, IOException, IncorrectPasswordException{
 		com.tools.encryption.PublicPrivateEncryptor sender = new PublicPrivateEncryptor(null, getSenderPublicKey());
 		com.tools.encryption.PublicPrivateEncryptor receiver = new PublicPrivateEncryptor(null, getReceiverPublicKey());
 		byte[] mes = getEncryptedMessage();
@@ -339,7 +413,7 @@ public class Transaction{
 		//verify the message
 		if (!message.verifyMessage())
 			throw new EncryptionException("Forged Message!");
-		
+
 		// check if we are receiver or sender
 		return message.decryptMessage(privateKeyPair);
 	}
@@ -375,7 +449,7 @@ public class Transaction{
 
 		return builder.toString();
 	}
-	
+
 	/**
 	 * Get the string for the asset (item) id
 	 * @return
@@ -407,7 +481,7 @@ public class Transaction{
 	private byte[] getEncryptedMessage(){
 		return parse.getBytes(EncryptedMessage);
 	}
-	
+
 	/**
 	 * Get teh amount of the transaction
 	 * @return
@@ -431,7 +505,7 @@ public class Transaction{
 	private byte[] getEncryptedSecretKeyForMessage(){
 		return parse.getBytes(EncryptedSecretKeyMessage);
 	}
-	
+
 	/**
 	 * Return the encrypted secrete key used to decode message
 	 * @return
@@ -512,7 +586,7 @@ public class Transaction{
 		return nComments;	
 	}
 	 */
-	
+
 	public static class UserNotInTransactionException
 	extends Exception{
 

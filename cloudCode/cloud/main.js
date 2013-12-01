@@ -6,6 +6,8 @@ var Amount = "Amount";
 var EncryptedMessage = "EncryptedMessage"; 	// encrypted message
 var HashArray = "HashArray"; 				// the important aspects of message that will be hashed
 var Signature = "Signature"; 				// hash of hash_string that verifies sender actually sent with private key
+var SendersNewTotal = "SendersNewTotal";
+var ReceiversNewTotal = "ReceiversNewTotal";
 
 var ASSET_NAME = "Asset";
 var OwnerPublic = "OwnerPublic";  			// owner of the Asset
@@ -34,7 +36,7 @@ var ERROR_GENERIC = "Generic error";
  * @param {} response the response
  * @returns {} get the total value of a given users account
  */
-Parse.Cloud.define("userValue", function(request, response) {
+Parse.Cloud.define("userValueOld", function(request, response) {
   	// transaction the user has sent
   	var query = new Parse.Query(TRANSACTION_NAME);
   	query.equalTo(SenderPublic, request.params.User);
@@ -70,6 +72,56 @@ Parse.Cloud.define("userValue", function(request, response) {
 });
 
 /**
+ * get the total value of a given users account by finding the most recent instance and reading value
+ *  requirs as input:
+ * User: the public key
+ * ItemType: The type of item to query on
+ * will return "User lookup failed on error
+ * will return the total amount of 'itemType' on success
+ * @param {} request the input
+ * @param {} response the response
+ * @returns {} get the total value of a given users account
+ */
+Parse.Cloud.define("userValue", function(request, response) {
+	
+	// find only transaction matching the public key for sender
+	var sender = new Parse.Query(TRANSACTION_NAME);
+	sender.equalTo(SenderPublic, request.params.User);
+	sender.equalTo(ItemType, request.params.ItemType)
+
+	// repeat for receiver
+	var receiver = new Parse.Query(TRANSACTION_NAME);
+	receiver.equalTo(ReceiverPublic, request.params.User);
+	receiver.equalTo(ItemType, request.params.ItemType)
+	
+	// the query
+	var mainQuery = Parse.Query.or(sender, receiver);
+	mainQuery.limit(1);
+	mainQuery.find({
+	  success: function(transactions) {
+	     var sum = 0;
+	     if (transactions.length > 0){
+	    	 // sender
+	    	 if (transactions[0].get(SenderPublic).localeCompare(request.params.User) == 0){
+	    		 sum = transactions[0].get(SendersNewTotal);
+	    		 // receiver
+	    	 }else if (transactions[0].get(ReceiverPublic).localeCompare(request.params.User) == 0){
+	    		 sum = transactions[0].get(ReceiversNewTotal);
+	    	 }else{
+	    		 response.error(ERROR_USER_LOOKUP_FAILED);
+	    	 }
+	    	 response.success(sum);
+	     }else{
+	    	 response.success(0);
+	     }
+	  },
+	  error: function(error) {
+		  response.error(ERROR_USER_LOOKUP_FAILED);
+	  }
+	});	
+});
+
+/**
  * Before we can save a transaction, make sure the user has enough items to transfer. and amount must be positive
  * will return "Insufficient funds" or "Cannot transfer negative values" on error
  * @param {} request request.object holds the transaction
@@ -94,7 +146,18 @@ Parse.Cloud.beforeSave(TRANSACTION_NAME, function(request, response) {
     							isValidNOnce(request.object, {
     								success: function(){
     									if (isVerifiedBySender(request.object)){
-    										response.success();
+    										// now update senders and receivers totals
+    										request.object.set(SendersNewTotal, totalValue-request.object.get(Amount));
+    										
+    										Parse.Cloud.run('userValue', { User: request.object.get(ReceiverPublic) , ItemType: request.object.get(ItemType)}, {
+    									  		success: function(totalValue2) {
+    									  			request.object.set(ReceiversNewTotal, totalValue2+request.object.get(Amount));
+    									  			response.success();
+    									  		},
+    									  		error: function(error) {
+    									  			response.error(error);
+    									  		}
+    										});
     									}else{
     										response.error(ERROR_NOT_VERIFIED_TRANSACTION);
     									}
