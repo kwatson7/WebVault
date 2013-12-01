@@ -1,9 +1,11 @@
 package com.webVault.serverobjects;
 
+import java.io.IOException;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.List;
 
+import android.os.IInterface;
 import android.text.Html;
 import android.text.Spanned;
 
@@ -12,6 +14,9 @@ import com.parse.ParseException;
 import com.parse.ParseObject;
 import com.parse.ParseQuery;
 import com.tools.encryption.EncryptionException;
+import com.webVault.StockSymbol;
+import com.webVault.StockSymbol.DownloadCallback;
+import com.webVault.YahooStock;
 
 public class Asset{
 
@@ -78,6 +83,57 @@ public class Asset{
 		com.tools.encryption.PublicPrivateEncryptor publicPrivate = new com.tools.encryption.PublicPrivateEncryptor(owner.getPrivate(), null);
 		parse.put(HashArray, hashBytes);
 		parse.put(Signature, publicPrivate.signData(hashBytes));
+	}
+	
+	/**
+	 * Fetch the price of the asset in default currency units (probably dollars) plus the premium
+	 * @param callback
+	 */
+	public void fetchPriceInBackground(final PriceDownloadCallback callback){
+		
+		// read values from the parse object
+		ParseObject parse = getParse();
+		String downloadService = parse.getString(DownloadService);
+		String symbol = parse.getString(Ticker);
+		final double premium = parse.getDouble(Premium)/100;
+		
+		// get the type of Service
+		final StockSymbol stock;
+		if (downloadService.equalsIgnoreCase("YahooStock")){
+			stock = new YahooStock(symbol);
+		}else
+			stock = null;
+		
+		
+		// download the price
+		stock.downloadPriceInBackground(new DownloadCallback() {
+			
+			@Override
+			public void onDownloadUiThread(IOException exception) {
+				double price = stock.getPrice();
+				callback.onDownloadUiThread(price*(1+premium), exception);
+			}
+			
+			@Override
+			public void onDownloadBackGroundThread(IOException exception) {
+				double price = stock.getPrice();
+				callback.onDownloadBackGroundThread(price*(1+premium), exception);
+			}
+		});
+			
+	}
+	
+	public interface PriceDownloadCallback{
+		/**
+		 * NOT GUARANTEED TO BE CALLED. Will not be called if errors occur before we enter background thread.
+		 * @param exception If any exception occured. Null if successful
+		 */
+		public void onDownloadBackGroundThread(double price, IOException exception);
+		/**
+		 * Called on main calling thread when finished downloading.
+		 * @param exception If any exception occured. Null if successful.
+		 */
+		public void onDownloadUiThread(double price, IOException exception);
 	}
 
 	/**
