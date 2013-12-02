@@ -11,6 +11,7 @@ public class Prefs {
 	private static final String KEY_FILE = "KEY_FILE";
 	private static final String NICKNAME_FILE = "NICKNAME_FILE";
 	private static final String PATTERN_ARRAY = "PATTERN_ARRAY";
+	private static final String ENCRYPTED_PASSWORD = "ENCRYPTED_PASSWORD";
 	
 	// default values
 	public static final String DEFAULT_STRING = null;
@@ -41,6 +42,24 @@ public class Prefs {
 	 */
 	public static void setKeyFile(Context ctx, String keyFile){
 		setStringPref(ctx, KEY_FILE, keyFile);
+	}
+	
+	/**
+	 * Set the encrypted password that was encrypted with SymmetricEncryptor and a screen pattern
+	 * @param ctx
+	 * @param encryptedPassword
+	 */
+	public static void setEncryptedPassword(Context ctx, String encryptedPassword){
+		setStringPref(ctx, ENCRYPTED_PASSWORD, encryptedPassword);
+	}
+	
+	/**
+	 * Get the encrypted password
+	 * @param ctx
+	 * @return
+	 */
+	public static String getEncryptedPassword(Context ctx){
+		return getStringPref(ctx, ENCRYPTED_PASSWORD);
 	}
 	
 	/**
