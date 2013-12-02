@@ -161,7 +161,6 @@ extends BaseAdapter{
 		// get the item
 		Transaction transaction = (Transaction) getItem(position);
 
-		// set fields
 		// date
 		date.setText(Utils.getFormattedDate(transaction.getDateCreated()));
 

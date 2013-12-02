@@ -4,22 +4,16 @@ import java.io.IOException;
 
 import group.pals.android.lib.ui.lockpattern.LockPatternActivity;
 import android.app.Activity;
-import android.app.AlertDialog;
-import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 import android.text.InputType;
 import android.util.Log;
 
-import com.google.zxing.integration.android.IntentIntegrator;
-import com.google.zxing.integration.android.IntentResult;
 import com.tools.CustomActivity;
 import com.tools.encryption.EncryptionException;
 import com.tools.encryption.IncorrectPasswordException;
 import com.tools.encryption.SymmetricEncryptor;
 import com.webVault.AccountData;
-import com.webVault.AccountData.AccountHolder;
-import com.webVault.AccountData.TimeoutException;
 import com.webVault.Prefs;
 import com.webVault.Utils;
 
@@ -48,7 +42,7 @@ public class LoginActivity extends CustomActivity {
 			return LoginResults.class.getEnumConstants()[value];
 		}
 	}
-	
+
 	/**
 	 * Parse activity result in onActivityResult when called by launchActivity
 	 * @param requestCode
@@ -83,7 +77,7 @@ public class LoginActivity extends CustomActivity {
 			return true;
 		}
 	}
-	
+
 	/**
 	 * Launch the login activity. Then in onActivityResult, use parseActivityResult
 	 * @param act the calling activity
@@ -97,12 +91,14 @@ public class LoginActivity extends CustomActivity {
 	@Override
 	protected void onCreateOverride(Bundle savedInstanceState) {
 		// just launch pattern activity for now
-		//Intent intent = new Intent(LockPatternActivity.ACTION_COMPARE_PATTERN, null,
-		//		ctx, LockPatternActivity.class);
-		//intent.putExtra(LockPatternActivity.EXTRA_PATTERN, Prefs.getPatternArray(ctx));
-		//	startActivityForResult(intent, LoginCalls.REQ_ENTER_PATTERN.ordinal());
+		Intent intent = new Intent(LockPatternActivity.ACTION_COMPARE_PATTERN, null,ctx, LockPatternActivity.class);
+		intent.putExtra(LockPatternActivity.EXTRA_PATTERN_WITH_SALT, Prefs.getPatternArray(ctx));
+		startActivityForResult(intent, LoginCalls.REQ_ENTER_PATTERN.ordinal());
 
-		launchPasswordActivity();
+		//Intent intent2 = new Intent(LockPatternActivity.ACTION_CREATE_PATTERN, null, ctx, LockPatternActivity.class);
+	//	startActivityForResult(intent2, LoginCalls.REQ_CREATE_PATTERN.ordinal());
+
+		//launchPasswordActivity();
 	}
 
 	/**
@@ -124,9 +120,27 @@ public class LoginActivity extends CustomActivity {
 		// the user created a pattern
 		case REQ_CREATE_PATTERN: {
 			if (resultCode == RESULT_OK) {
-				//savedPattern = data.getCharArrayExtra(
-				//LockPatternActivity.EXTRA_PATTERN);
-				//test2();
+				// store in shared prefs
+				char[] savedPatternWithSalt = data.getCharArrayExtra(
+						LockPatternActivity.EXTRA_PATTERN_WITH_SALT);
+				Prefs.setPatternArray(ctx, savedPatternWithSalt);
+				char[] pattern = data.getCharArrayExtra(LockPatternActivity.EXTRA_PATTERN);
+
+				// encrypt the password
+				try {
+					SymmetricEncryptor encr = new SymmetricEncryptor(pattern);
+					fix this line
+					Prefs.setEncryptedPassword(ctx, encr.encryptStringToBase64String("password!"));
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					Log.e(Utils.LOG_TAG, Log.getStackTraceString(e));
+				} catch (EncryptionException e) {
+					// TODO Auto-generated catch block
+					Log.e(Utils.LOG_TAG, Log.getStackTraceString(e));
+				}
+				
+				// show toast
+				Utils.showCustomToast(this, "Pattern saved", true, 1);
 			}
 			break;
 		}
@@ -137,10 +151,27 @@ public class LoginActivity extends CustomActivity {
 			// login was good
 			case RESULT_OK:
 				// grab the pattern that can be used to decode data
-				char[] key = data.getCharArrayExtra(LockPatternActivity.EXTRA_PATTERN_WITH_SALT);
+				char[] key = data.getCharArrayExtra(LockPatternActivity.EXTRA_PATTERN);
 				Intent intent = new Intent();
 				intent.putExtra(PATTERN_KEY, key);
 				setResult(LoginResults.SUCCESSFUL_KEY.ordinal(), intent);
+				
+				// retrieve password and read it
+				String encryptedPassword = Prefs.getEncryptedPassword(ctx);
+				try {
+					SymmetricEncryptor enc = new SymmetricEncryptor(key);
+					String password = enc.decryptBase64StringToString(encryptedPassword);
+					loadDataToFinishActivity(password);
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					Log.e(Utils.LOG_TAG, Log.getStackTraceString(e));
+				} catch (EncryptionException e) {
+					// TODO Auto-generated catch block
+					Log.e(Utils.LOG_TAG, Log.getStackTraceString(e));
+				} catch (IncorrectPasswordException e) {
+					// TODO Auto-generated catch block
+					Log.e(Utils.LOG_TAG, Log.getStackTraceString(e));
+				}
 				finish();
 
 				break;
@@ -157,60 +188,64 @@ public class LoginActivity extends CustomActivity {
 			break;
 		}// REQ_ENTER_PATTERN
 		case REQ_ENTER_PASSWORD:
-			
+
 			switch (resultCode) {
-			
+
 			// login was good
 			case RESULT_OK:
 				// we entered the password, so grab it
 				String password = data.getStringExtra(com.tools.DialogWithInputBox.RESULT);
-
-				// try to extract data with password. try again if wrong password
-				try {
-					AccountData.loadData(this, password);
-					
-					// finish this activity
-					Intent intent = new Intent();
-					intent.putExtra(PATTERN_PASSWORD, password);
-					setResult(LoginResults.SUCCESSFUL_PASSWORD.ordinal(), intent);
-					finish();
-					
-				} catch (IOException e) {
-					Log.e(Utils.LOG_TAG, Log.getStackTraceString(e));
-					Utils.showCustomToast(this, "Could not read file", false, 1);
-					
-					// finish this activity
-					Intent intent = new Intent();
-					setResult(LoginResults.ERROR.ordinal(), intent);
-					finish();
-					
-				} catch (IncorrectPasswordException e) {
-					Utils.showCustomToast(this, "Incorrect Password... try again", false, 1);
-					launchPasswordActivity();
-					return;
-				} catch (EncryptionException e) {
-					Log.e(Utils.LOG_TAG, Log.getStackTraceString(e));
-					Utils.showCustomToast(this, e.getMessage(), false, 1);
-					
-					// finish this activity
-					Intent intent = new Intent();
-					setResult(LoginResults.ERROR.ordinal(), intent);
-					finish();
-				}
-
+				loadDataToFinishActivity(password);
 				break;
 			case RESULT_CANCELED:
 				setResult(LoginResults.CANCEL.ordinal());
 				finish();
 				break;
 			}
-			
-			
+
+
 		default:
 			break;
 		}
 	}
 
+	/**
+	 * Load the data using the password and finish activity unless we need to try the password again. Also show toasts
+	 * @param password the password
+	 */
+	private void loadDataToFinishActivity(String password){
+		// try to extract data with password. try again if wrong password
+		try {
+			AccountData.loadData(this, password);
+
+			// finish this activity
+			Intent intent = new Intent();
+			intent.putExtra(PATTERN_PASSWORD, password);
+			setResult(LoginResults.SUCCESSFUL_PASSWORD.ordinal(), intent);
+			finish();
+
+		} catch (IOException e) {
+			Log.e(Utils.LOG_TAG, Log.getStackTraceString(e));
+			Utils.showCustomToast(this, "Could not read file", false, 1);
+
+			// finish this activity
+			Intent intent = new Intent();
+			setResult(LoginResults.ERROR.ordinal(), intent);
+			finish();
+		} catch (IncorrectPasswordException e) {
+			Utils.showCustomToast(this, "Incorrect Password... try again", false, 1);
+			launchPasswordActivity();
+		} catch (EncryptionException e) {
+			Log.e(Utils.LOG_TAG, Log.getStackTraceString(e));
+			Utils.showCustomToast(this, e.getMessage(), false, 1);
+
+			// finish this activity
+			Intent intent = new Intent();
+			setResult(LoginResults.ERROR.ordinal(), intent);
+			finish();
+		}
+	}
+	
 	private void decodeDataHARDCODEPASSWORD(char[] key){
 
 		try {
@@ -243,7 +278,7 @@ public class LoginActivity extends CustomActivity {
 	protected void onDestroyOverride() {
 
 	}
-	
+
 	/**
 	 * Interface for handling the different results after a login
 	 * @author Kyle
@@ -268,7 +303,7 @@ public class LoginActivity extends CustomActivity {
 		 * @param password
 		 */
 		public void onSuccessfulLoginPassword(String password);
-		
+
 		/**
 		 * The login failed with an error
 		 * @param error The string for the error
